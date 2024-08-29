@@ -73,4 +73,16 @@ def handle_client(client_socket):
                     if GPIO.input(pin) == GPIO.HIGH:
                         response = json.dumps({color: 'pressed'})
                         client_socket.send(response.encode('utf-8'))
-                        print(f"Button {color.replace('_', ' ')} pressed, sent to Unity
+                        print(f"Button {color.replace('_', ' ')} pressed, sent to Unity")
+                        while GPIO.input(pin) == GPIO.HIGH:
+                            pass  # Wait until the button is released
+    except ConnectionResetError:
+        print("Client disconnected")
+    finally:
+        client_socket.close()
+
+while True:
+    client_socket, addr = server_socket.accept()
+    print(f"Connection from {addr}")
+    client_handler = threading.Thread(target=handle_client, args=(client_socket,))
+    client_handler.start()
