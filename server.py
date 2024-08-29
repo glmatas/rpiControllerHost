@@ -33,14 +33,19 @@ signal.signal(signal.SIGINT, signal_handler)
 
 # Light startup animation
 def startup_animation():
+    print("Running startup animation...")
     for _ in range(3):
         for color in lights:
+            print(f"Turning on {color}")
             GPIO.output(lights[color], GPIO.HIGH)
             time.sleep(0.2)
+            print(f"Turning off {color}")
             GPIO.output(lights[color], GPIO.LOW)
+    print("Turning all lights on...")
     for color in lights:
         GPIO.output(lights[color], GPIO.HIGH)
     time.sleep(0.5)
+    print("Turning all lights off...")
     for color in lights:
         GPIO.output(lights[color], GPIO.LOW)
 
@@ -59,18 +64,21 @@ def handle_client(client_socket):
             data = client_socket.recv(1024).decode('utf-8')
             if not data:
                 break
-            print(f"Received: {data}")
+            print(f"Received JSON data: {data}")
             light_states = json.loads(data)
             
             # Update lights based on received JSON
             for color, state in light_states.items():
                 if color in lights:
+                    print(f"Setting {color} to {'HIGH' if state else 'LOW'}")
                     GPIO.output(lights[color], GPIO.HIGH if state else GPIO.LOW)
             
             # Monitor button presses and send feedback to Unity
             while True:
                 for color, pin in buttons.items():
-                    if GPIO.input(pin) == GPIO.HIGH:
+                    button_state = GPIO.input(pin)
+                    print(f"Button {color.replace('_', ' ')} state: {button_state}")
+                    if button_state == GPIO.HIGH:
                         response = json.dumps({color: 'pressed'})
                         client_socket.send(response.encode('utf-8'))
                         print(f"Button {color.replace('_', ' ')} pressed, sent to Unity")
