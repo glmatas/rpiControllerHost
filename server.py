@@ -74,15 +74,13 @@ def handle_client(client_socket):
                     if json_object is None:
                         break
                     print(f"Received: {json_object}")
-                    message = json.loads(json_object)
+                    light_states = json.loads(json_object)
                     
-                    # Check for light control command
-                    if "type" in message and message["type"] == "light_command":
-                        light_states = message["data"]
-                        for color, state in light_states.items():
-                            if color in lights:
-                                GPIO.output(lights[color], GPIO.HIGH if state else GPIO.LOW)
-                                print(f"Set {color} to {'HIGH' if state else 'LOW'}")
+                    # Directly handle light control commands
+                    for color, state in light_states.items():
+                        if color in lights:
+                            GPIO.output(lights[color], GPIO.HIGH if state else GPIO.LOW)
+                            print(f"Set {color} to {'HIGH' if state else 'LOW'}")
                 except json.JSONDecodeError:
                     break  # Wait for more data to complete the JSON object
 
