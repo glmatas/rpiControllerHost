@@ -58,16 +58,21 @@ def handle_client(client_socket):
     button_thread.start()
 
     try:
+        buffer = ""  # Buffer to handle partial messages
         while True:
             # Receive JSON data from Unity client
             data = client_socket.recv(1024).decode('utf-8')
             if not data:
                 break
-
-            # Split and process each JSON object separately
-            json_objects = data.split('\n')
-            for json_object in json_objects:
-                if json_object.strip():  # Ignore empty strings
+            
+            buffer += data
+            # Process each complete JSON object in the buffer
+            while True:
+                try:
+                    # Attempt to parse a full JSON object from the buffer
+                    json_object, buffer = extract_json_object(buffer)
+                    if json_object is None:
+                        break
                     print(f"Received: {json_object}")
                     light_states = json.loads(json_object)
                     
@@ -76,10 +81,30 @@ def handle_client(client_socket):
                         if color in lights:
                             GPIO.output(lights[color], GPIO.HIGH if state else GPIO.LOW)
                             print(f"Set {color} to {'HIGH' if state else 'LOW'}")
-    except (ConnectionResetError, json.JSONDecodeError):
-        print("Client disconnected or JSON parsing error")
+                except json.JSONDecodeError:
+                    break  # Wait for more data to complete the JSON object
+
+    except (ConnectionResetError, OSError):
+        print("Client disconnected or socket error")
     finally:
         client_socket.close()
+
+def extract_json_object(buffer):
+    """Extracts a complete JSON object from the buffer if possible."""
+    open_braces = 0
+    start_index = 0
+
+    for i, char in enumerate(buffer):
+        if char == '{':
+            if open_braces == 0:
+                start_index = i
+            open_braces += 1
+        elif char == '}':
+            open_braces -= 1
+            if open_braces == 0:
+                return buffer[start_index:i+1], buffer[i+1:]
+
+    return None, buffer  # No complete JSON object found
 
 def monitor_buttons(client_socket):
     last_state = {color: GPIO.LOW for color in buttons}  # Track last state of each button
@@ -98,7 +123,7 @@ def monitor_buttons(client_socket):
                             print("Failed to send data, client might have disconnected")
                             return
             time.sleep(0.1)  # Small delay to prevent high CPU usage
-    except ConnectionResetError:
+    except (ConnectionResetError, OSError):
         print("Client disconnected")
     finally:
         client_socket.close()
