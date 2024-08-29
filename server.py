@@ -63,16 +63,21 @@ def handle_client(client_socket):
             data = client_socket.recv(1024).decode('utf-8')
             if not data:
                 break
-            print(f"Received: {data}")
-            light_states = json.loads(data)
-            
-            # Update lights based on received JSON
-            for color, state in light_states.items():
-                if color in lights:
-                    GPIO.output(lights[color], GPIO.HIGH if state else GPIO.LOW)
-                    print(f"Set {color} to {'HIGH' if state else 'LOW'}")
-    except ConnectionResetError:
-        print("Client disconnected")
+
+            # Split and process each JSON object separately
+            json_objects = data.split('\n')
+            for json_object in json_objects:
+                if json_object.strip():  # Ignore empty strings
+                    print(f"Received: {json_object}")
+                    light_states = json.loads(json_object)
+                    
+                    # Update lights based on received JSON
+                    for color, state in light_states.items():
+                        if color in lights:
+                            GPIO.output(lights[color], GPIO.HIGH if state else GPIO.LOW)
+                            print(f"Set {color} to {'HIGH' if state else 'LOW'}")
+    except (ConnectionResetError, json.JSONDecodeError):
+        print("Client disconnected or JSON parsing error")
     finally:
         client_socket.close()
 
@@ -86,8 +91,12 @@ def monitor_buttons(client_socket):
                     last_state[color] = button_state
                     if button_state == GPIO.HIGH:
                         response = json.dumps({color: 'pressed'}) + '\n'
-                        client_socket.send(response.encode('utf-8'))
-                        print(f"Button {color.replace('_', ' ')} pressed, sent to Unity")
+                        try:
+                            client_socket.send(response.encode('utf-8'))
+                            print(f"Button {color.replace('_', ' ')} pressed, sent to Unity")
+                        except OSError:
+                            print("Failed to send data, client might have disconnected")
+                            return
             time.sleep(0.1)  # Small delay to prevent high CPU usage
     except ConnectionResetError:
         print("Client disconnected")
