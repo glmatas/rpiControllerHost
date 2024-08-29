@@ -25,7 +25,7 @@ def signal_handler(sig, frame):
     for pin in lights.values():
         GPIO.output(pin, GPIO.LOW)  # Turn off all lights
     GPIO.cleanup()
-    server_socket.close()
+    server_socket.close()  # Ensure server_socket is defined
     sys.exit(0)
 
 # Register the signal handler for Ctrl+C
@@ -47,24 +47,10 @@ def startup_animation():
 # Run the startup animation
 startup_animation()
 
-# Function to monitor button presses and send updates to Unity
-def monitor_buttons(client_socket):
-    last_state = {color: GPIO.LOW for color in buttons}  # Track last state of each button
-    try:
-        while True:
-            for color, pin in buttons.items():
-                button_state = GPIO.input(pin)
-                if button_state != last_state[color]:  # Detect state change
-                    last_state[color] = button_state
-                    if button_state == GPIO.HIGH:
-                        response = json.dumps({color: 'pressed'})
-                        client_socket.send(response.encode('utf-8'))
-                        print(f"Button {color.replace('_', ' ')} pressed, sent to Unity")
-            time.sleep(0.1)  # Small delay to prevent high CPU usage
-    except ConnectionResetError:
-        print("Client disconnected")
-    finally:
-        client_socket.close()
+# Server setup
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server_socket.bind(('0.0.0.0', 65432))  # Listening on all interfaces on port 65432
+server_socket.listen(5)
 
 def handle_client(client_socket):
     # Start the button monitoring in a separate thread
@@ -85,6 +71,24 @@ def handle_client(client_socket):
                 if color in lights:
                     GPIO.output(lights[color], GPIO.HIGH if state else GPIO.LOW)
                     print(f"Set {color} to {'HIGH' if state else 'LOW'}")
+    except ConnectionResetError:
+        print("Client disconnected")
+    finally:
+        client_socket.close()
+
+def monitor_buttons(client_socket):
+    last_state = {color: GPIO.LOW for color in buttons}  # Track last state of each button
+    try:
+        while True:
+            for color, pin in buttons.items():
+                button_state = GPIO.input(pin)
+                if button_state != last_state[color]:  # Detect state change
+                    last_state[color] = button_state
+                    if button_state == GPIO.HIGH:
+                        response = json.dumps({color: 'pressed'})
+                        client_socket.send(response.encode('utf-8'))
+                        print(f"Button {color.replace('_', ' ')} pressed, sent to Unity")
+            time.sleep(0.1)  # Small delay to prevent high CPU usage
     except ConnectionResetError:
         print("Client disconnected")
     finally:
