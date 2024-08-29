@@ -68,17 +68,18 @@ def handle_client(client_socket):
                     GPIO.output(lights[color], GPIO.HIGH if state else GPIO.LOW)
                     print(f"Set {color} to {'HIGH' if state else 'LOW'}")
             
-            # Monitor button presses and send feedback to Unity
-            while True:
+            # Wait for a button press
+            button_pressed = False
+            while not button_pressed:
                 for color, pin in buttons.items():
                     button_state = GPIO.input(pin)
-                    print(f"Button {color} state: {'HIGH' if button_state == GPIO.HIGH else 'LOW'}")
                     if button_state == GPIO.HIGH:
                         response = json.dumps({color: 'pressed'})
                         client_socket.send(response.encode('utf-8'))
                         print(f"Button {color.replace('_', ' ')} pressed, sent to Unity")
-                        while GPIO.input(pin) == GPIO.HIGH:
-                            pass  # Wait until the button is released
+                        button_pressed = True
+                        break
+                time.sleep(0.1)  # Small delay to prevent high CPU usage
     except ConnectionResetError:
         print("Client disconnected")
     finally:
