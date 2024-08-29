@@ -74,13 +74,15 @@ def handle_client(client_socket):
                     if json_object is None:
                         break
                     print(f"Received: {json_object}")
-                    light_states = json.loads(json_object)
+                    message = json.loads(json_object)
                     
-                    # Update lights based on received JSON
-                    for color, state in light_states.items():
-                        if color in lights:
-                            GPIO.output(lights[color], GPIO.HIGH if state else GPIO.LOW)
-                            print(f"Set {color} to {'HIGH' if state else 'LOW'}")
+                    # Check for light control command
+                    if "type" in message and message["type"] == "light_command":
+                        light_states = message["data"]
+                        for color, state in light_states.items():
+                            if color in lights:
+                                GPIO.output(lights[color], GPIO.HIGH if state else GPIO.LOW)
+                                print(f"Set {color} to {'HIGH' if state else 'LOW'}")
                 except json.JSONDecodeError:
                     break  # Wait for more data to complete the JSON object
 
@@ -115,7 +117,7 @@ def monitor_buttons(client_socket):
                 if button_state != last_state[color]:  # Detect state change
                     last_state[color] = button_state
                     if button_state == GPIO.HIGH:
-                        response = json.dumps({color: 'pressed'}) + '\n'
+                        response = json.dumps({"type": "button_press", "button": color}) + '\n'
                         try:
                             client_socket.send(response.encode('utf-8'))
                             print(f"Button {color.replace('_', ' ')} pressed, sent to Unity")
