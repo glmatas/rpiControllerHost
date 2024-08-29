@@ -85,7 +85,7 @@ def monitor_buttons(client_socket):
                 if button_state != last_state[color]:  # Detect state change
                     last_state[color] = button_state
                     if button_state == GPIO.HIGH:
-                        response = json.dumps({color: 'pressed'})
+                        response = json.dumps({color: 'pressed'}) + '\n'
                         client_socket.send(response.encode('utf-8'))
                         print(f"Button {color.replace('_', ' ')} pressed, sent to Unity")
             time.sleep(0.1)  # Small delay to prevent high CPU usage
