@@ -14,7 +14,7 @@ try:
     while True:
         for color, pin in buttons.items():
             button_state = GPIO.input(pin)
-            if button_state == GPIO.HIGH:
+            if button_state == GPIO.LOW:
                 print(f"{color.replace('_', ' ')} pressed")
         time.sleep(0.1)  # Small delay to prevent high CPU usage
 except KeyboardInterrupt:
