@@ -4,7 +4,7 @@ import time
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 
-lights = {'green_light': 14, 'yellow_light': 18, 'red_light': 4}  # GPIO pins for lights
+lights = {'green_light': 17, 'yellow_light': 18, 'red_light': 4}  # GPIO pins for lights
 
 for pin in lights.values():
     GPIO.setup(pin, GPIO.OUT)
